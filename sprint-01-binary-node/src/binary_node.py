@@ -16,19 +16,6 @@ class BinaryNode:
     """
     AAS 核心ルールの最小概念実装。
 
-    数学モデル
-    ---------
-    weight(t+1) = clip(weight(t) + learning_rate * input(t)
-                       - forgetting_rate, 0, 1)
-
-    物理的解釈
-    ---------
-    - input=1: 経路を使った状態 (Joule 加熱に相当、ember が燃える)
-    - input=0: 経路を使わない状態 (自然冷却に相当、ember が冷める)
-    - learning_rate: 加熱強度に相当
-    - forgetting_rate: 冷却強度に相当
-    - weight: 経路の重み (PTC の抵抗変化量に相当する量)
-
     Parameters
     ----------
     learning_rate : float, optional
@@ -40,6 +27,21 @@ class BinaryNode:
     ----------
     weight : float
         現在の weight (読み取り専用 property)。値域 [0, 1]、初期値 0。
+
+    Notes
+    -----
+    数学モデル:
+
+        weight(t+1) = clip(weight(t) + learning_rate * input(t)
+                           - forgetting_rate, 0, 1)
+
+    物理的解釈:
+
+    - input=1: 経路を使った状態 (Joule 加熱に相当、ember が燃える)
+    - input=0: 経路を使わない状態 (自然冷却に相当、ember が冷める)
+    - learning_rate: 加熱強度に相当
+    - forgetting_rate: 冷却強度に相当
+    - weight: 経路の重み (PTC の抵抗変化量に相当する量)
 
     Examples
     --------
