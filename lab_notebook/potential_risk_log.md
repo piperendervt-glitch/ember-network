@@ -27,6 +27,7 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 | PRL-009 | 自己参照ループ + 運用設計 | 外部 AI ファイルの偶発的可視 (pytest 自動収集) | Sprint 3 | 部分対処 (pytest.ini exclude) | C9 |
 | PRL-010 | Sprint Planning の見落とし + 外部視点 | 外部 AI 4/6 が fractional input を自然視 | Sprint 3 | Sprint 4 で再評価 | C3, C9 |
 | PRL-011 | API 設計 + テストカバレッジ | 非物理初期状態 (T < T_env) の検証手段なし | Sprint 3 | Sprint 4 で再評価 | C3 |
+| PRL-012 | 仕様の見落とし + 設計支援役の品質 | 設計支援役 Claude のテンプレート的指示 | Sprint 3 | Sprint 4 で運用改善検討 | C8, C9 |
 
 ---
 
@@ -212,6 +213,36 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
   の追加を検討
 - **関連 Commitment**: Commitment 3
 - **次回再評価**: Sprint 4 Planning
+
+### PRL-012: 設計支援役 Claude のテンプレート的指示
+
+- **発見日**: Sprint 3 完了 push 直前 (Halt-and-Confirm)
+- **カテゴリ**: 仕様の見落とし + 設計支援役の品質課題
+- **事象**: Sprint 3 完了時の git tag + push 指示で、設計支援役 Claude
+  (Sprint Planning 担当の別セッション) が Sprint 1, 2 のテンプレートを
+  機械的にコピーし、Sprint 3 特有の状況 (`external_ai_responses/` が
+  既に commit 済み) を確認せずに矛盾する注意事項を出した。具体的には
+  「.venv/, .claude/, __pycache__/, .pytest_cache/, external_ai_responses/
+  が commit に含まれていないことを確認 (.gitignore で除外)」という指示
+  だが、`external_ai_responses/` は Step C で既に commit 済み (Robosheep
+  承認済み) のため事実と矛盾。
+- **発見の経緯**: Claude Code の Halt-and-Confirm (push 直前)
+- **影響範囲**: Sprint 3 では Claude Code の Halt-and-Confirm で検出
+  されて回避 (Option B = そのまま tag/push で確定)。類似のテンプレート
+  的指示が将来の Sprint 完了時にも発生する可能性。
+- **対処状況**: Sprint 3 完了報告では Option B で対応。Sprint 4 Planning
+  で「設計支援役 Claude のテンプレート使用時の確認」運用を改善検討。
+- **残存リスク**:
+  - 設計支援役 Claude が Sprint 4 以降でも同種のテンプレート的指示を
+    する可能性
+  - Claude Code の Halt-and-Confirm がなければ気づけない構造 (PRL-006
+    のテストカバレッジが Claude 認識依存と同型のリスク)
+  - 「設計支援役 Claude (Sprint Planning 担当) ↔ Claude Code (実装担当)」
+    の役割分担に依存した検出構造であり、Claude Code が同種のテンプレート
+    的処理に陥った場合に検出不能
+- **関連 Commitment**: Commitment 8 (Honest Self-Assessment), Commitment 9
+- **検証方法**: Sprint 4 以降で同種の事例が発生するかを観察
+- **次回再評価**: Sprint 3 Retrospective、Sprint 4 Planning
 
 ---
 
