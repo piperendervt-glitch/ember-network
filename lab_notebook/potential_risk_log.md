@@ -23,7 +23,7 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 | PRL-005 | 自己参照ループ | doctest の期待値が実装結果由来 | Sprint 2 | 対処方針確定 (Rule 10.1) | C8, C9 |
 | PRL-006 | 自己参照ループ | Claude Code が認識したケースのみテストされる | Sprint 2 | 対処方針確定 (Rule 10.5) | C9 |
 | PRL-007 | 自己参照ループ | Claude Code 自身による Devil's Advocate は外部視点ではない | Sprint 2 | 対処方針確定 (Rule 10.5) | C9 |
-| PRL-008 | 自己参照ループ | Halt-and-Confirm の推奨が承認される構造 | Sprint 2 | 監視中 | C9 |
+| PRL-008 | 自己参照ループ | Halt-and-Confirm の推奨が承認される構造 | Sprint 2 | 部分検証済み (Sprint 3 Step D 事例) | C9 |
 | PRL-009 | 自己参照ループ + 運用設計 | 外部 AI ファイルの偶発的可視 (pytest 自動収集) | Sprint 3 | 部分対処 (pytest.ini exclude) | C9 |
 | PRL-010 | Sprint Planning の見落とし + 外部視点 | 外部 AI 4/6 が fractional input を自然視 | Sprint 3 | Sprint 4 で再評価 | C3, C9 |
 | PRL-011 | API 設計 + テストカバレッジ | 非物理初期状態 (T < T_env) の検証手段なし | Sprint 3 | Sprint 4 で再評価 | C3 |
@@ -132,12 +132,22 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
   に承認させる構造」になっている可能性
 - **発見の経緯**: Claude Code の Devil's Advocate #5 での自己批判
 - **影響範囲**: プロジェクト全体の判断プロセス
-- **対処状況**: 監視中
-- **残存リスク**: Sprint 3 でも同じ構造が継続する可能性
-- **検証方法**: Sprint 3 で「Claude の推奨が Robosheep に却下される事例」が
-  発生するかを観察
+- **対処状況**: 部分検証済み (Sprint 3 Step D 事例で部分的反証)
+- **Sprint 3 Step D での部分検証**:
+  - 私 (Claude Code) の提示した 4 選択肢: Option A (skip)、B
+    (adapt to input=1)、C (Sprint 3 spec 拡張)、D (ハイブリッド)
+  - Robosheep の判断: **Option E** (新規) — 「Sprint 3 では skip、
+    Sprint 4 で PRL-010 として再評価」という時間軸を組み込んだ構造
+  - これは「Claude が想定したオプションの中から Robosheep が選ぶ」構造
+    ではなく「Robosheep が独立に新オプションを設計する」構造
+  - 完全反証ではない (Robosheep は Claude の提示を起点に Option E を
+    構築しているため微妙な依存関係が残る) が、PRL-008 が指摘した懸念
+    への部分的反証として記録
+- **残存リスク**: Sprint 4 以降で同様の構造的反証事例が継続するか観察
+- **検証方法**: Sprint 4 以降で「Claude の推奨に対し Robosheep が独立に
+  新オプションを提示する事例」が継続するか観察
 - **関連 Commitment**: Commitment 9
-- **次回再評価**: Sprint 3 Retrospective
+- **次回再評価**: Sprint 4 Retrospective
 
 ### PRL-009: 外部 AI ファイルの偶発的可視 (Sprint 3 で発見)
 
