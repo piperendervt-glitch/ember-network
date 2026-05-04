@@ -176,6 +176,13 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
   - 同種の「Claude 系列共通の盲点」が他の場面でも存在する可能性
   - dt=0 の扱い (ChatGPT I Test 8): Sprint 3 では ValueError、Sprint 4
     以降で no-op 許容を検討
+- **Hypothesis max_examples の増強検討** (Sprint 3 Step E 時に追記):
+  - 現状: bounded property test で `max_examples=40` (Step D 追加)
+  - 引き継ぎ: Sprint 4 で `max_examples=200` への増強と他の不変量
+    (monotonicity 等) への展開を検討
+  - 動機: 実時間 ~0.5 sec で済むため、現状は防御的すぎる設定
+  - 注意: PTC 非線形性 (Sprint 4 で導入) 後は Hypothesis の検証力が
+    更に重要になる
 - **関連 Commitment**: Commitment 3 (Bounded Scope), Commitment 9
 - **検証方法**: Sprint 4 Planning で再評価
 - **次回再評価**: Sprint 4 Planning
