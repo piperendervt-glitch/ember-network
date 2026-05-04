@@ -24,6 +24,9 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 | PRL-006 | 自己参照ループ | Claude Code が認識したケースのみテストされる | Sprint 2 | 対処方針確定 (Rule 10.5) | C9 |
 | PRL-007 | 自己参照ループ | Claude Code 自身による Devil's Advocate は外部視点ではない | Sprint 2 | 対処方針確定 (Rule 10.5) | C9 |
 | PRL-008 | 自己参照ループ | Halt-and-Confirm の推奨が承認される構造 | Sprint 2 | 監視中 | C9 |
+| PRL-009 | 自己参照ループ + 運用設計 | 外部 AI ファイルの偶発的可視 (pytest 自動収集) | Sprint 3 | 部分対処 (pytest.ini exclude) | C9 |
+| PRL-010 | Sprint Planning の見落とし + 外部視点 | 外部 AI 4/6 が fractional input を自然視 | Sprint 3 | Sprint 4 で再評価 | C3, C9 |
+| PRL-011 | API 設計 + テストカバレッジ | 非物理初期状態 (T < T_env) の検証手段なし | Sprint 3 | Sprint 4 で再評価 | C3 |
 
 ---
 
@@ -135,6 +138,63 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
   発生するかを観察
 - **関連 Commitment**: Commitment 9
 - **次回再評価**: Sprint 3 Retrospective
+
+### PRL-009: 外部 AI ファイルの偶発的可視 (Sprint 3 で発見)
+
+- **発見日**: Sprint 3 Step C 中
+- **カテゴリ**: 自己参照ループ + 運用設計の隠れた前提
+- **事象**: external_ai_responses/ の .py ファイルが pytest の自動収集で
+  ImportError を起こし、エラーメッセージから Claude Code がファイル名と
+  import 行を偶発的に観察
+- **発見の経緯**: Sprint 3 Step C 完了報告
+- **影響範囲**: Sprint 3 の運用設計、Sprint 4 以降の同種運用
+- **対処状況**: 部分的に対処 (pytest.ini で構造的 exclude)
+- **残存リスク**:
+  - Claude Code の「中身を見ていない」という自己報告の検証手段が内省のみ
+  - 同種の偶発的可視が他のツール (flake8、IDE 等) で発生する可能性
+- **関連 Commitment**: Commitment 9
+- **検証方法**: Sprint 3 完了時、Robosheep が中身を確認した時に偶発的可視
+  の影響の有無を事後評価
+- **次回再評価**: Sprint 3 Retrospective
+
+### PRL-010: 外部 AI による fractional input の独立提案
+
+- **発見日**: Sprint 3 Step D 中
+- **カテゴリ**: Sprint Planning の見落とし + 外部視点の発見
+- **事象**: 6 つの外部 AI テストファイルのうち、4 つ以上が fractional
+  input (input ∈ [0, 1]) を自然視するテストを提案。Sprint 3 OKR では
+  input ∈ {0, 1} を Out of Scope (項目 17) として明示していたが、これは
+  外部 AI 視点では「ember-network 特有の判断」と認識されなかった可能性。
+- **発見の経緯**: Sprint 3 Step D での外部 AI ファイル読了時
+- **影響範囲**:
+  - Sprint 3 では Option E に基づき該当テストを skip
+  - Sprint 4 Planning で fractional input サポートを再評価
+- **対処状況**: Sprint 4 への引き継ぎ事項として記録
+- **残存リスク**:
+  - fractional input の Out of Scope 化が ember-network の研究方針
+    (deterrence-oriented) と整合するかの判断が未確定
+  - 同種の「Claude 系列共通の盲点」が他の場面でも存在する可能性
+  - dt=0 の扱い (ChatGPT I Test 8): Sprint 3 では ValueError、Sprint 4
+    以降で no-op 許容を検討
+- **関連 Commitment**: Commitment 3 (Bounded Scope), Commitment 9
+- **検証方法**: Sprint 4 Planning で再評価
+- **次回再評価**: Sprint 4 Planning
+
+### PRL-011: 非物理初期状態の検証
+
+- **発見日**: Sprint 3 Step D
+- **カテゴリ**: API 設計 + テストカバレッジ
+- **事象**: 外部 AI が「T < T_env からの復帰」を検証するテストを提案
+  (ChatGPT II Test 4: T = -1.0 開始; ChatGPT II Test 9 後半: T_low =
+  -0.5)。Sprint 3 の現実装は `_T = T_env` 固定で、負の初期 T を直接設定
+  不可。
+- **発見の経緯**: Sprint 3 Step D での外部 AI ファイル読了時
+- **影響範囲**: Sprint 3 では skip、Sprint 4 以降で T_initial パラメータ
+  の追加を検討
+- **対処状況**: Sprint 3 では skip、Sprint 4 以降で T_initial パラメータ
+  の追加を検討
+- **関連 Commitment**: Commitment 3
+- **次回再評価**: Sprint 4 Planning
 
 ---
 

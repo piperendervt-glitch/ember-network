@@ -230,6 +230,51 @@ def test_invariant_5_heat_flow_at_T_env_no_change():
 
 
 @given(
+    heating_rate=st.floats(min_value=0.01, max_value=2.0,
+                           allow_nan=False, allow_infinity=False),
+    cooling_rate=st.floats(min_value=0.01, max_value=1.0,
+                           allow_nan=False, allow_infinity=False),
+    T_env=st.floats(min_value=-5.0, max_value=5.0,
+                    allow_nan=False, allow_infinity=False),
+    T_offset=st.floats(min_value=0.5, max_value=10.0,
+                       allow_nan=False, allow_infinity=False),
+    seed=st.integers(min_value=0, max_value=10**6),
+)
+@settings(max_examples=40, deadline=3000)
+def test_invariant_3_bounded_property_based(heating_rate, cooling_rate,
+                                            T_env, T_offset,
+                                            seed):  # noqa: E127
+    """Hypothesis: 様々なパラメータで bounded 不変量が成立 (clip ロジック検証)。
+
+    Note: Devil's Advocate #4 (Sprint 3 Step C 完了報告) で「Hypothesis 2
+    件は違反しにくい性質を選んだ可能性」を自己批判したことへの対応。clip
+    ロジックは入力切替時の境界条件で複雑な分岐を持ち、バグが入りやすい
+    箇所として bounded (T <= T_max) を選択。
+    """
+    T_max = T_env + T_offset
+    node = TemperatureNode(
+        heating_rate=heating_rate,
+        cooling_rate=cooling_rate,
+        T_env=T_env,
+        T_max=T_max,
+        clip_enabled=True,
+    )
+    rng = np.random.default_rng(seed=seed)
+    # heating_rate >= cooling_rate * T_offset の場合、clip なしなら T_max
+    # を超えうる (T_eq = T_env + heating/cooling > T_max)。clip がそれを
+    # 防ぐかを検証する真のストレステスト。
+    for _ in range(500):
+        inp = int(rng.integers(0, 2))
+        node.update(input_value=inp, dt=0.05)
+        assert node.temperature <= T_max + 1e-10, (
+            f"bounded 違反: T={node.temperature}, T_max={T_max}, "
+            f"params=(h={heating_rate}, c={cooling_rate}, "
+            f"T_env={T_env}, T_offset={T_offset})"
+        )
+        assert node.temperature >= T_env - 1e-10
+
+
+@given(
     heating_rate=st.floats(min_value=0.01, max_value=1.0,
                            allow_nan=False, allow_infinity=False),
     cooling_rate=st.floats(min_value=0.01, max_value=1.0,
