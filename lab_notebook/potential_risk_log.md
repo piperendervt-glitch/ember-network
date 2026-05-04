@@ -24,10 +24,10 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 | PRL-006 | 自己参照ループ | Claude Code が認識したケースのみテストされる | Sprint 2 | 対処方針確定 (Rule 10.5) | C9 |
 | PRL-007 | 自己参照ループ | Claude Code 自身による Devil's Advocate は外部視点ではない | Sprint 2 | 対処方針確定 (Rule 10.5) | C9 |
 | PRL-008 | 自己参照ループ | Halt-and-Confirm の推奨が承認される構造 | Sprint 2 | 部分検証済み (Sprint 3 Step D 事例) | C9 |
-| PRL-009 | 自己参照ループ + 運用設計 | 外部 AI ファイルの偶発的可視 (pytest 自動収集) | Sprint 3 | 部分対処 (pytest.ini exclude) | C9 |
-| PRL-010 | Sprint Planning の見落とし + 外部視点 | 外部 AI 4/6 が fractional input を自然視 | Sprint 3 | Sprint 4 で再評価 | C3, C9 |
-| PRL-011 | API 設計 + テストカバレッジ | 非物理初期状態 (T < T_env) の検証手段なし | Sprint 3 | Sprint 4 で再評価 | C3 |
-| PRL-012 | 仕様の見落とし + 設計支援役の品質 | 設計支援役 Claude のテンプレート的指示 | Sprint 3 | Sprint 4 で運用改善検討 | C8, C9 |
+| PRL-009 | 自己参照ループ + 運用設計 | 外部 AI ファイルの偶発的可視 (pytest 自動収集) | Sprint 3 | 部分対処継続 (Sprint 4 pytest.ini で構造的 exclude を最初から適用) | C9 |
+| PRL-010 | Sprint Planning の見落とし + 外部視点 | 外部 AI 4/6 が fractional input を自然視 | Sprint 3 | Sprint 4 で対処中 (fractional input + dt=0 + Hypothesis max_examples=200) | C3, C9 |
+| PRL-011 | API 設計 + テストカバレッジ | 非物理初期状態 (T < T_env) の検証手段なし | Sprint 3 | Sprint 4 で対処中 (T_initial パラメータ導入) | C3 |
+| PRL-012 | 仕様の見落とし + 設計支援役の品質 | 設計支援役 Claude のテンプレート的指示 | Sprint 3 | Sprint 4 で対処中 (Rule 11 5 項目チェックリスト導入) | C8, C9 |
 
 ---
 
@@ -250,12 +250,28 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 
 - 2026-05-04 (Sprint 3 開始時、初版作成): PRL-001 から PRL-008 を Sprint 2
   Retrospective の確定版として記載。ハイブリッド形式 (選択肢 Z) を採用。
+- 2026-05-04 (Sprint 3 中): PRL-009 を追加 (Step C 中の偶発的可視発見)。
+- 2026-05-04 (Sprint 3 Step D 中): PRL-010、PRL-011 を追加 (外部 AI による
+  fractional input / T_initial 提案)。PRL-008 を「部分検証済み」に更新
+  (Step D の Option E 事例)。
+- 2026-05-04 (Sprint 3 完了 push 直前): PRL-012 を追加 (設計支援役 Claude の
+  テンプレート的指示)。
+- 2026-05-04 (Sprint 4 開始時): PRL-009 〜 PRL-012 のステータスを Sprint 4
+  での対処方針へ更新。
+  - PRL-009: Sprint 4 pytest.ini で最初から `--ignore=external_ai_responses`
+    を適用 (構造的継承)
+  - PRL-010: Sprint 4 で fractional input、dt=0 no-op、Hypothesis
+    max_examples=200 を導入
+  - PRL-011: Sprint 4 で T_initial パラメータを TemperatureNode に導入
+  - PRL-012: Sprint 4 開始時に Rule 11 (5 項目チェックリスト) を CLAUDE.md
+    に追加
 
 ## 運用ノート
 
 - 各 PRL の対処は Sprint 完了時にステータスを更新する
 - 「対処済み」は当該 Sprint で具体的対策が完了した場合
 - 「対処方針確定」は方針は決まったが効果検証は次 Sprint 以降
+- 「対処中」は当該 Sprint で具体的対策が進行中の場合
 - 「監視中」は能動的対策が困難で、観察によりリスク顕在化を検知する場合
-- Sprint 3 中に新規発見された潜在リスクは PRL-009 以降として追加する
+- Sprint 4 中に新規発見された潜在リスクは PRL-013 以降として追加する
 - 認識していない盲点は本ログに含まれない (PRL-006, PRL-007 の限界)
