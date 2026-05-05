@@ -28,6 +28,8 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 | PRL-010 | Sprint Planning の見落とし + 外部視点 | 外部 AI 4/6 が fractional input を自然視 | Sprint 3 | Sprint 4 で対処中 (fractional input + dt=0 + Hypothesis max_examples=200) | C3, C9 |
 | PRL-011 | API 設計 + テストカバレッジ | 非物理初期状態 (T < T_env) の検証手段なし | Sprint 3 | Sprint 4 で対処中 (T_initial パラメータ導入) | C3 |
 | PRL-012 | 仕様の見落とし + 設計支援役の品質 | 設計支援役 Claude のテンプレート的指示 | Sprint 3 | Sprint 4 で対処中 (Rule 11 5 項目チェックリスト導入) | C8, C9 |
+| PRL-013 | 再現性方法論の限界 | 長期的な再現性検証の不在 (pip freeze だけでは不十分) | Sprint 4 | 監視中 | C5 |
+| PRL-014 | 数学と実装の乖離 + Hypothesis の検出能力 | Hypothesis が IEEE 754 精度限界を不変量違反として検出する性質 | Sprint 4 | 対処済み (選択肢 B) | C5, C9 |
 
 ---
 
@@ -214,6 +216,71 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 - **関連 Commitment**: Commitment 3
 - **次回再評価**: Sprint 4 Planning
 
+### PRL-013: 長期的な再現性検証の不在
+
+- **発見日**: Sprint 4 Step A 中
+- **カテゴリ**: 再現性方法論の限界
+- **事象**: Sprint 1, 2, 3, 4 で pip freeze による完全固定を実施している
+  が、「実際に Sprint X を再 install して全テスト pass」という検証は
+  実施していない。Sprint 4 で mutmut とその依存 (textual 8.x 等の活発
+  開発中ライブラリ) が追加されたことで、長期的な再現性のリスクが顕在化。
+- **発見の経緯**: Sprint 4 Step A の Devil's Advocate #2
+- **影響範囲**: Commitment 5 (Reproducibility First) の運用
+- **対処状況**: 監視中
+- **残存リスク**:
+  - Sprint 4 を 1 年後等に再現する際、依存ライブラリの非互換変更が発生
+    する可能性
+  - pip freeze による固定だけでは、PyPI からのライブラリ削除や
+    バージョン無効化に対応できない
+  - Python 自体のバージョン変更 (3.12 → 3.13 等) への対応未検証
+- **関連 Commitment**: Commitment 5 (Reproducibility First)
+- **検証方法**: Sprint 5 以降で「過去の Sprint を別環境で再現」を試行
+- **次回再評価**: Sprint 5 完了時、または別途タイミング
+
+### PRL-014: Hypothesis が IEEE 754 精度限界を不変量違反として検出する性質
+
+- **発見日**: Sprint 4 タスク 11 中 (2026-05-05)
+- **カテゴリ**: 数学と実装の乖離 + Hypothesis の検出能力
+- **事象**: Sprint 4 タスク 11 で Hypothesis を不変量 7 (PTC monotonicity)
+  に適用した際、subnormal float (5.76e-298) と 0.0 の比較で R(T_a) ==
+  R(T_b) となる事例を発見。これは数学的には strict 単調増加だが、IEEE 754
+  の精度限界 (1.0 + ε ≈ 1.0 となる) で weakly monotonic にしかならない
+  領域。実装 `_R_factor(T) = 1.0 + α_PTC * (T - T_ref)` で T が subnormal
+  の場合、`α_PTC * T` の寄与が machine epsilon (~2.22e-16) より小さい
+  ため、1.0 への加算で丸められる。
+- **発見の経緯**: Sprint 4 タスク 11 (KR-S3 検証) の Hypothesis テスト
+  (max_examples=200)。Halt-and-Confirm (Tripwire #4 候補) を経由して
+  Robosheep の判断を仰いだ。
+- **影響範囲**:
+  - Sprint 4 不変量 7 の preregister 文言 (脚注で対処)
+  - 将来の Sprint で類似の問題が発生する可能性 (Sprint 5 multi-path、
+    Sprint 6 AAS Dynamics 等)
+  - Hypothesis-based property test の解釈の運用パターン
+- **対処状況**: Sprint 4 で対処
+  - 選択肢 (B) を採用: Hypothesis テスト範囲を物理的に意味のある領域
+    に制限 (subnormal 除外、`assume(abs(T_a - T_b) > 1e-10 or T_a == T_b)`)
+  - threshold = 1e-10 の根拠: strict 単調検出条件 `α · |T_a - T_b| > ε`
+    の binding ケース (α_min=0.001) で `|T_a-T_b| > 2.22e-13`、安全係数
+    ~10^3 を見込み Sprint 7 物理単位 (典型 1e-3 K) も大幅下回る範囲を選択
+  - SPRINT_OKR.md の不変量 7 に脚注を追加 (`[^inv7]`)
+  - 数学的記述 (strict 単調増加) は保持、実装の精度限界を脚注で明示
+- **残存リスク**:
+  - 同種の「数学と実装の乖離」が他の不変量でも発生する可能性
+    (例: 不変量 1 monotonicity でも極端な dt や subnormal の場合)
+  - IEEE 754 精度限界が Sprint 4 以降の検証に与える影響の体系的評価が
+    必要
+  - threshold 1e-10 自体の妥当性 (Sprint 7 で物理単位を導入した時点で
+    再評価が必要)
+- **関連 Commitment**:
+  - Commitment 5 (Reproducibility First): 数値計算の精度限界の明示
+  - Commitment 9 (自己参照ループの残存リスクの管理): Hypothesis が発見
+    する違反の解釈
+- **検証方法**:
+  - Sprint 4 中: 選択肢 (B) で対処済み
+  - Sprint 5 以降: 類似の発見が起きるか監視
+  - Sprint 4 完了報告で詳細記述
+- **次回再評価**: Sprint 4 完了報告、Sprint 4 Retrospective
+
 ### PRL-012: 設計支援役 Claude のテンプレート的指示
 
 - **発見日**: Sprint 3 完了 push 直前 (Halt-and-Confirm)
@@ -265,6 +332,14 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
   - PRL-011: Sprint 4 で T_initial パラメータを TemperatureNode に導入
   - PRL-012: Sprint 4 開始時に Rule 11 (5 項目チェックリスト) を CLAUDE.md
     に追加
+- 2026-05-04 (Sprint 4 Step A 中): PRL-013 (長期的な再現性検証の不在) を
+  追加。Sprint 4 Step A の Devil's Advocate #2 由来。Robosheep の判断で
+  記録。
+- 2026-05-05 (Sprint 4 タスク 11 中): PRL-014 (Hypothesis が IEEE 754 精度
+  限界を不変量違反として検出する性質) を追加。Hypothesis (max_examples=200)
+  が subnormal float での不変量 7 (PTC monotonicity) violation を検出。
+  Halt-and-Confirm (Tripwire #4 候補) を経由して Robosheep が選択肢 (B)
+  (Hypothesis 範囲制限、SPRINT_OKR.md 現状維持 + 脚注追加) を採用。
 
 ## 運用ノート
 
@@ -273,5 +348,5 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 - 「対処方針確定」は方針は決まったが効果検証は次 Sprint 以降
 - 「対処中」は当該 Sprint で具体的対策が進行中の場合
 - 「監視中」は能動的対策が困難で、観察によりリスク顕在化を検知する場合
-- Sprint 4 中に新規発見された潜在リスクは PRL-013 以降として追加する
+- Sprint 4 中に新規発見された潜在リスクは PRL-015 以降として追加する
 - 認識していない盲点は本ログに含まれない (PRL-006, PRL-007 の限界)

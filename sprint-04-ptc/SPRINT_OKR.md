@@ -103,8 +103,17 @@ preregister された 8 つの不変量がすべての時刻で成立する。Hy
 | 4 | equilibrium | input>0 一定継続: b<0 なら T → T_eq、b>=0 なら発散 (clip なし) / T_max (clip あり) |
 | 5 | heat-flow direction | input=0 で T と T_env の大小に応じた dT/dt の符号 (対称性) |
 | 6 | weight-temperature linearity | 全時刻で w = (T - T_env) / (T_max - T_env) |
-| 7 | PTC monotonicity (新規) | α_PTC > 0 で R(T) は T に対し単調増加 (dR/dT = R_0 · α_PTC) |
+| 7 | PTC monotonicity (新規) | α_PTC > 0 で R(T) は T に対し単調増加 (dR/dT = R_0 · α_PTC) [^inv7] |
 | 8 | PTC reference (新規) | T = T_ref のとき R(T) = R_0 |
+
+[^inv7]: 本不変量は数学的に strict 単調増加 (dR/dT = α_PTC > 0) を主張するが、
+    IEEE 754 浮動小数点実装では、|T - T_ref| が machine epsilon に対し相対的に
+    小さい場合 (subnormal 領域等) で weakly monotonic に縮退する。具体的には
+    `1.0 + α_PTC · (T - T_ref)` において `α_PTC · (T - T_ref)` が machine
+    epsilon (~2.22e-16) より小さい寄与しか持たない場合、IEEE 754 の丸めで
+    `1.0` となる。本不変量の Hypothesis 検証では、テスト範囲を物理的に意味の
+    ある領域に制限 (subnormal 除外、`|T_a - T_b| > 1e-10`) して実装している。
+    詳細は PRL-014 を参照。
 
 ### KR-S4: fractional input サポートの検証
 
