@@ -30,6 +30,7 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 | PRL-012 | 仕様の見落とし + 設計支援役の品質 | 設計支援役 Claude のテンプレート的指示 | Sprint 3 | Sprint 4 で対処中 (Rule 11 5 項目チェックリスト導入) | C8, C9 |
 | PRL-013 | 再現性方法論の限界 | 長期的な再現性検証の不在 (pip freeze だけでは不十分) | Sprint 4 | 監視中 | C5 |
 | PRL-014 | 数学と実装の乖離 + Hypothesis の検出能力 | Hypothesis が IEEE 754 精度限界を不変量違反として検出する性質 | Sprint 4 | 対処済み (選択肢 B) | C5, C9 |
+| PRL-015 | 再現性方法論の限界 | 依存ライブラリの環境互換性確認の不在 (mutmut 3.5.0 が Windows 非対応) | Sprint 4 | 対処済み (WSL 採用、kill rate 79.79%) | C5 |
 
 ---
 
@@ -281,6 +282,95 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
   - Sprint 4 完了報告で詳細記述
 - **次回再評価**: Sprint 4 完了報告、Sprint 4 Retrospective
 
+### PRL-015: 依存ライブラリの環境互換性確認の不在
+
+- **発見日**: Sprint 4 タスク 16 開始時 (2026-05-05)
+- **カテゴリ**: 再現性方法論の限界 (PRL-013 と関連)
+- **事象**: Sprint 4 Step A で requirements.txt に mutmut==3.5.0 を固定
+  したが、mutmut 3.5.0 が Windows native で動作しないことが Step D
+  (タスク 16) で発覚。`python -m mutmut --version` 実行時に
+  "To run mutmut on Windows, please use the WSL." エラーが返る。
+  Sprint 4 Planning と Step A の両方で、依存ライブラリの環境互換性
+  (OS、Python バージョン) を事前に確認する手順が運用されていなかった。
+
+  さらに、選択肢 (A) (WSL で mutmut を実行) を採用した後、WSL 自体は
+  Docker Desktop 経由でインストールされていたが、汎用 Linux ディスト
+  リビューション (Ubuntu 等) は未インストールであることが判明。
+  Robosheep が手動で `wsl --install Ubuntu` を実施する必要が発生。
+  これは「WSL の存在」と「Linux 開発環境としての利用可能性」が別問題
+  であることの実証で、依存ライブラリの環境互換性確認に加えて、ホスト
+  環境の互換性確認も必要であることを示す事例。
+
+  Ubuntu 26.04 LTS が初回インストールされたが、Sprint 4 Windows 環境
+  の Python 3.12.10 と整合させるため、Robosheep の判断で
+  `wsl --unregister Ubuntu` で削除し、Ubuntu 24.04 LTS (Python 3.12.3)
+  を明示指定して再インストール。Windows 3.12.10 と WSL 3.12.3 で
+  パッチバージョン差 (7 リリース分) が残るが、IEEE 754 挙動への影響は
+  極めて低いと判断、選択肢 Y (差を許容して進行、OS 間比較を観察) を
+  採用 (Robosheep の判断)。
+
+  Ubuntu 24.04 のデフォルトには `python3-venv` パッケージが含まれず、
+  Robosheep が手動で `sudo apt install python3.12-venv python3-pip`
+  を実行 (passwordless sudo は採用せず、本タスク限りの手動入力)。
+  apt install 中に IPv6 接続エラーが一時発生したが、再試行で解決。
+  これは依存ライブラリの環境互換性 (PRL-015 本来の事象) に加えて、
+  「**OS パッケージ管理の互換性 (apt の網羅性)**」と「**ネットワーク
+  経路の互換性 (IPv6/IPv4 の二重スタック)**」も再現性の課題に含まれる
+  ことを示す事例。
+- **発見の経緯**: Sprint 4 タスク 16 開始時の Halt-and-Confirm
+- **影響範囲**:
+  - Sprint 4 Mutation Testing の実施 (WSL 環境で対処)
+  - Sprint 5 以降での新規依存導入時の同種問題発生リスク
+  - requirements.txt の運用上の限界 (バージョン固定では環境互換性は
+    保証されない、PRL-013 で扱う長期再現性とは別の短期再現性の問題)
+- **対処状況**: Sprint 4 で選択肢 (A) を採用、WSL 環境で mutmut を実行 (完了)
+  - Robosheep が手動で WSL Ubuntu 24.04 LTS をセットアップ
+  - Claude Code が WSL 環境で Python 環境を構築、mutmut を実行
+  - Python 3.12.3 (WSL) vs 3.12.10 (Windows) のパッチ差は許容
+    (選択肢 Y、Robosheep 判断)
+  - これにより Sprint 4 で WSL 環境を確立し、Sprint 5 以降の研究基盤
+    にも活用可能
+  - **追加で発覚した環境互換性問題と対処** (Sprint 4 タスク 16 実行中):
+    1. **`/mnt/c` 上での mutants/ 生成失敗**: mutmut の `change_cwd('mutants')`
+       が Windows ファイルシステム経由 (`/mnt/c`) で permission エラー。
+       ソースを `~/sprint-04-mutmut/` (Linux fs) に複製して実行。
+    2. **`scenarios.py` が `tests_dir` 外に配置**: テストが
+       `from scenarios import ...` するが、mutmut は tests_dir のみ
+       コピー対象とする。`setup.cfg` に `also_copy = scenarios.py`
+       を追加。
+    3. **Sprint 3 比較テストの相対パス解決**: `_SPRINT4.parent /
+       "sprint-03-temperature"` が `mutants/` 経由実行時に存在しない
+       場所を指す。`~/sprint-04-mutmut/sprint-03-temperature` に
+       Sprint 3 への symlink を追加して解決。
+    4. **`multiprocessing.set_start_method('fork')` の重複実行**:
+       mutmut の trampoline が `mutmut.__main__` を import する際、
+       `python -m mutmut` で起動した module は `__main__` として
+       sys.modules に登録されているため、`mutmut.__main__` の import が
+       module の top-level コードを再実行する。`set_start_method('fork')`
+       が二度呼ばれて `RuntimeError: context has already been set`。
+       `tests/conftest.py` で `MUTANT_UNDER_TEST` 環境変数があるとき
+       `set_start_method` を tolerant 版に monkey-patch して回避。
+  - **kill rate 結果**: 304/381 = 79.79% (Tripwire #8 [< 50%] 発動せず)
+  - **survived mutant カテゴリ**: デフォルト引数値 (約 8 件)、
+    エラーメッセージ文字列 (約 12 件)、`<` ⇄ `<=` 境界 (約 5 件)、
+    T_env=0 / T_ref=0 coverage gap (3 件)、dt の特定値 coverage gap
+    (1 件)、MMS 内部冗長変異 (約 25 件)、timeout (1 件)
+  - **詳細**: `sprint-04-ptc/mutmut_summary.md` を参照
+- **残存リスク**:
+  - Sprint 5 以降で新規依存ライブラリを導入する際、同種問題が発生する
+    可能性
+  - Robosheep の研究環境 (Windows) と WSL 環境の二重管理が必要
+  - 別環境 (Linux native、macOS) での Sprint 4 の再現性は未検証
+  - WSL 環境と Windows 環境で IEEE 754 浮動小数点挙動が完全に同一か
+    未検証 (KR-S1 bit-perfect、PRL-014 subnormal の WSL 側での挙動)
+- **関連 Commitment**: Commitment 5 (Reproducibility First)
+- **検証方法**:
+  - Sprint 5 以降で新規依存導入時に環境互換性を事前確認するチェック
+    リストを運用
+  - Sprint 4 中: Mutation Testing の WSL 実行による対処の検証
+  - 長期的: 別環境 (例: Linux native) での Sprint 4 の再現性検証
+- **次回再評価**: Sprint 4 完了報告、Sprint 4 Retrospective
+
 ### PRL-012: 設計支援役 Claude のテンプレート的指示
 
 - **発見日**: Sprint 3 完了 push 直前 (Halt-and-Confirm)
@@ -340,6 +430,10 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
   が subnormal float での不変量 7 (PTC monotonicity) violation を検出。
   Halt-and-Confirm (Tripwire #4 候補) を経由して Robosheep が選択肢 (B)
   (Hypothesis 範囲制限、SPRINT_OKR.md 現状維持 + 脚注追加) を採用。
+- 2026-05-05 (Sprint 4 タスク 16 開始時): PRL-015 (依存ライブラリの環境
+  互換性確認の不在) を追加。mutmut 3.5.0 が Windows native 非対応である
+  ことが Step D 開始時に発覚。Halt-and-Confirm を経由して Robosheep が
+  選択肢 (A) (WSL 環境で mutmut 実行) を採用。
 
 ## 運用ノート
 
@@ -348,5 +442,5 @@ Rule 10.6 (検知確率 90% KPI と潜在リスクログ) および Commitment 9
 - 「対処方針確定」は方針は決まったが効果検証は次 Sprint 以降
 - 「対処中」は当該 Sprint で具体的対策が進行中の場合
 - 「監視中」は能動的対策が困難で、観察によりリスク顕在化を検知する場合
-- Sprint 4 中に新規発見された潜在リスクは PRL-015 以降として追加する
+- Sprint 4 中に新規発見された潜在リスクは PRL-016 以降として追加する
 - 認識していない盲点は本ログに含まれない (PRL-006, PRL-007 の限界)

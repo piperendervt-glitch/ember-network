@@ -1,4 +1,5 @@
 .venv/
+.venv-wsl/
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -6,3 +7,4 @@ __pycache__/
 .mutmut-cache
 mutants/
 html/
+mutants_state.json
